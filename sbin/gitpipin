@@ -1,0 +1,91 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import subprocess
+import pprint
+from argparse import ArgumentParser
+from collections import OrderedDict
+
+git_server = "http://mmgitpup.zion.eprecisiondialogue.com"
+git_url = "{0}/{1}/{2}".format
+
+def git_version():
+    retval = subprocess.getoutput("git describe --tags").split("-")[0]
+    return retval
+
+def git_name():
+    retval = subprocess.getoutput("basename $(git rev-parse --show-toplevel)")
+    return retval
+
+def git_group():
+    retval = subprocess.getoutput("whoami")
+    return retval
+
+def git_repo():
+    retval = "{}.git".format(git_name())
+    return retval
+
+def git_user():
+    retval = subprocess.getoutput("git config user.name")
+    return retval
+
+def git_email():
+    retval = subprocess.getoutput("git config user.email")
+    return retval
+
+def setup_args():
+    retval = { 
+        "name": git_name(),
+        "version": git_version(),
+        "description": "put your description here",
+        "url": git_url(git_server, git_group(), git_repo()),
+        "author": git_user(),
+        "author_email": git_email(),
+        "license": "MIT",
+        "packages": [git_name()],
+        "install_requires": [],
+        "entry_points": {
+            "console_scripts": [
+                "hello-world={}.cli:hello_world_cli".format(git_name())
+            ]
+          }, 
+        "include_package_data": True,
+        "zip_safe": False
+    }
+    return retval
+
+def get_imports():
+    packages = [
+        "from setuptools import setup"
+    ]
+    retval = "{0}\n".format("\n".join(packages))
+    return retval
+
+def get_setup():
+    args = pprint.pformat(setup_args(), indent=4)
+    retval = "setup(**{0})".format(args)
+    return retval
+
+def cli_args(args):
+    desc = "Python Playground setup.py generator"
+    parser = ArgumentParser(description=desc)
+    parser.add_argument("-d", "--directory", default="src",
+                        help="python package root")
+    retval = vars(parser.parse_args(args))
+    return retval
+
+def write_setup(location):
+    setupname = os.path.join(location, "setup.py")
+    with open(setupname, "w") as fout:
+        fout.write(get_imports())
+        fout.write(get_setup())
+
+if __name__ == "__main__":
+    args = cli_args(sys.argv[1:])
+    write_setup(args['directory'])
+    pipcmd = [
+        "cd {0}".format(args['directory']),
+        "pip install --upgrade ."
+    ]
+    subprocess.call(";\n".join(pipcmd), shell=True)

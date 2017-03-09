@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+
+function gitpipin-install () {
+#set -o errexit
+set -o pipefail
+set -o nounset
+
+__src_cli_call="${BASH_SOURCE[0]}"
+__src_location="$(cd "$(dirname "${__src_cli_call}")" && pwd )"
+__src_absolute="${__src_location}/$(basename "${__src_cli_call}")"
+__src_name="$(basename "${__src_absolute}")"
+__src_home="$(cd "$(dirname "${__src_location}")" && pwd)"
+
+PY_VERSION="/usr/local/bin/python3.3"
+PY_HOME="${__src_home}/opt/python3.3"
+
+function install-virtualenv () {
+    cd ${__src_home}
+    if [[ "$(uname)" = "Linux" ]];then
+	    virtualenv --clear --no-site-package -p "${PY_VERSION}" "${PY_HOME}"
+	else
+	    virtualenv --clear --no-site-package "${PY_HOME}"
+	    ln -s "${PY_HOME}/Scripts" "${PY_HOME}/bin"
+	fi
+}
+
+function install-rename-src-gitpipin () {
+    local newname="$(basename "${__src_home}")"
+    local newpath="${__src_home}/src/${newname}"
+    local oldpath="${__src_home}/src/gitpipin"
+    git mv "${oldpath}" "${newpath}"
+}
+
+function install-python-packages () {
+
+    local git_server=mmgitpup
+    local git_group=kheidenreich
+
+    set +o nounset
+    source ${PY_HOME}/bin/activate
+    set -o nounset
+
+    pip install --upgrade pip
+    if [[ -f "${__src_home}/etc/install/packages" ]];then
+        "${__src_home}/etc/install/packages"
+    fi
+    install-rename-src-gitpipin
+    "${__src_location}/gitpipin"
+}
+
+
+function install-main () {
+    install-virtualenv
+    if [[ "$(uname)" = "Linux" ]];then
+        sbin/verifyenv
+    fi
+    install-python-packages
+}
+
+install-main "$@"
+}
+gitpipin-install "$@"
+
+unset -f gitpipin-install
+
+source "${PY_HOME}/bin/activate"
